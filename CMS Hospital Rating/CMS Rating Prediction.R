@@ -1,13 +1,5 @@
 ########################################## Health care capstone Project ##########################################
 # CMS Rating Project
-
-# Team Members:
-# SAI PAVAN (LEADER)
-# JOHN PRASHANTH GNANIAH M 
-# KUNAL DESHPANDE
-# ROSHINI THYAGARAJ
-
-
 options("scipen"=100, "digits"=4)
 rm(list=ls())
 
