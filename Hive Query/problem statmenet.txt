@@ -1,0 +1,120 @@
+Telecom companies record their users’ activity data, i.e. calls, SMS and internet usage for billing and monitoring purposes. This data is commonly called Call Detail Record (CDR) data, though apart from calls, it also contains data of text messages, internet usage etc.
+
+ 
+
+Since a typical telecom company has millions of users, they generate massive quantities of data.  
+
+In this assignment, you will analyse the ‘Milano Grid’ telecom data which contains the telecommunication activity recorded over the city of Milano in Italy. The data is collected by the Telecom Italia cellular network over the city of Milano.
+
+ 
+
+There are many types of CDRs, though, in this dataset, we have considered those related to the following activities:
+
+    Received SMS: a CDR is generated each time a user receives an SMS
+
+    Sent SMS: a CDR is generated each time a user sends an SMS
+
+    Incoming Calls: a CDR is generated each time a user receives a call
+
+    Outgoing Calls: CDR is generated each time a user issues a call
+
+    Internet: a CDR is generated each time
+
+        a user starts an internet connection
+
+        a user ends an internet connection
+
+        during the same connection, one of the following limits is reached:
+
+            15 minutes from the last generated CDR
+
+            5 MB from the last generated CDR
+By aggregating the aforementioned records this dataset was created that provides SMSes, calls and Internet traffic activity. It measures the level of interaction of the users with the mobile phone network; for example, the higher the number of SMSes sent by the users, the higher is the activity of the sent SMS. Measurements of call and SMS activity have the same scale (therefore are comparable); those referring to internet traffic do not.
+
+ 
+
+Telecom companies often divide a geographic area into various grids, as shown in the image below. You can also read about the Milano Grid here.
+
+ 
+
+The city of Milano is divided into various grids, or squares, as shown below, each denoted in this dataset by a unique square_id.
+
+ 
+
+Please note that:
+
+All the square ids belong to the city of Milano. The country code corresponding to Milano is 39 (Italy). 
+
+Country code 0 means that the telco operator doesn't know the country of origin/destination or that the user asked to have this info hidden for privacy reasons. For the purpose of the assignment, you will assume that 0 is just another country code. 
+
+Schema
+
+The schema of the dataset is described below:
+
+    Square id: the id of the square that is part of the Milano GRID; TYPE: numeric
+
+    Time interval: the beginning of the time interval expressed as the number of milliseconds elapsed from the Unix Epoch on January 1st, 1970 at UTC. The end of the time interval can be obtained by adding 600000 milliseconds (10 minutes) to this value. TYPE: numeric
+
+    Country code: the phone country code of a nation. Depending on the measured activity this value assumes different meanings that are explained later. TYPE: numeric
+
+    SMS-in activity: the activity in terms of received SMS inside the Square id, during the time interval and sent from the nation identified by the Country code. TYPE: numeric
+
+    SMS-out activity: the activity in terms of sent SMS inside the Square id, during the Time interval and received by the nation identified by the Country code. TYPE: numeric
+
+    Call-in activity: the activity in terms of received calls inside the Square id, during the Time interval and issued from the nation identified by the Country code. TYPE: numeric
+
+    Call-out activity: the activity in terms of issued calls inside the Square id, during the Time interval and received by the nation identified by the Country code. TYPE: numeric
+
+    Internet traffic activity: the activity in terms of performed internet traffic inside the Square id, during the Time interval and by the nation of the users performing the connection identified by the Country code . TYPE: numeric
+
+Task 0: Store data on S3
+
+    Create a bucket in S3 and upload the data in the bucket.
+
+    Once the cluster is running, open the Hue notebook.
+
+ 
+
+Task 1: Understand the data in hand
+
+    The dataset is of size ~6MB, which should not be deleted. Hence import the entire data in an external table.
+
+    The data has a lot of empty cells. Import it such that the empty cells are treated as NULL in Hive.
+
+ 
+
+Task 2: Writing Hive Queries - I
+
+You are working as an analyst responsible for analysing telecom data of three countries (country_code = 39, 43, 33). First create a table from the external table created in task 1, to store the data corresponding only to these three countries. Do the following analysis on these three countries.
+
+ 
+
+    How many grids (square_ids) are there in total in the given three countries? Display the number of unique grids in the three countries.
+
+    Which country has the minimum total internet activity? Display the country code of this country.
+
+    Which country among the given three has the second highest total activity? Note that total activity is defined as the sum of sms_in, sms_out, call_in, call_out, internet_traffic. Display the country code of this country. Do not compress the table.
+
+    Which squareID has the maximum total SMS activity in these three countries? Note that total SMS activity is the sum of incoming and outgoing SMSes.
+
+    What is the total activity for the three countries? Note that total activity is defined as the sum of sms_in, sms_out, call_in, call_out, internet_traffic. For this task, first compress the table that was created in the beginning of task 2. Submit the result upto three decimal places, without rounding off the digits, obtained after compressing the table.  
+
+ 
+
+Task 3: Writing Hive Queries - II
+
+ 
+
+Now, say you want to analyze a specific country with country code=39. Also, you are analysing the activity of three specific grids with square_ids 101, 102 and 103 in this country.
+
+ 
+
+First partition the table you created at the beginning of task 2, which makes it fast and convenient to query this particular country. Use this partitioned table to answer the following questions.  
+
+ 
+
+    What is the total call activity from the three square_ids to country_code 39? Submit the result up to three decimal places, without rounding off the digits.  
+
+    What is the total SMS activity from the three square_ids to country_code 39? Submit the result up to three decimal places, without rounding off the digits.
+
+    What is the total activity, i.e. sum of CallIn, CallOut, SMSIn, SMSOut, internet traffic of the three square_ids? Submit the result upto three decimal places, without rounding off the digits. You may either compress the partitioned table or not.

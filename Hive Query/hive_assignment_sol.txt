@@ -1,0 +1,138 @@
+--Creating a database for the analysis
+CREATE DATABASE IF NOT EXISTS assgn location 's3://hiveassgn/db1';
+
+--Creating External table and load the CDR dataset
+CREATE EXTERNAL TABLE IF NOT EXISTS
+assgn.cdr (
+square_id INT,
+time_interval BIGINT,
+country_code INT,
+sms_in_act DOUBLE,
+sms_out_act DOUBLE,
+call_in_act DOUBLE,
+call_out_act DOUBLE,
+internet_traff_act DOUBLE)
+COMMENT 'This table contains Call Detail Record  of users'
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY '\t';
+--Load
+LOAD DATA INPATH 's3://hiveassgn/CDR.txt' INTO TABLE assgn.cdr;
+
+--Creating a table containing the details of (country_code = 39, 43, 33)
+CREATE TABLE assgn.cdr_cntry3 (
+square_id INT,
+time_interval BIGINT,
+country_code INT,
+sms_in_act DOUBLE,
+sms_out_act DOUBLE,
+call_in_act DOUBLE,
+call_out_act DOUBLE,
+internet_traff_act DOUBLE);
+--Load
+INSERT OVERWRITE TABLE assgn.cdr_cntry3
+SELECT square_id,
+time_interval,
+country_code,
+sms_in_act,
+sms_out_act,
+call_in_act,
+call_out_act,
+internet_traff_act
+FROM assgn.cdr WHERE country_code IN (39,43,33);
+
+--1.How many grids (square_ids) are there in total in the given three countries? 
+SELECT COUNT(DISTINCT square_id) no_of_grid FROM assgn.cdr_cntry3;--240
+
+--2.Which country has the minimum total internet activity? Display the country code of this country. 
+SELECT country_code min_tot_int_act_cntry FROM 
+(SELECT 
+country_code,
+SUM(internet_traff_act) tot_int_actv 
+FROM assgn.cdr_cntry3 
+GROUP BY country_code 
+ORDER BY tot_int_actv 
+LIMIT 1) Temp1;--43
+
+--3.Which country among the given three has the second highest total activity? Note that total activity is defined as the sum of sms_in, sms_out, call_in, call_out, internet_traffic. Display the country code of this country. Do not compress the table.
+SELECT country_code sec_hig_tot_act_cntry FROM (SELECT
+country_code,
+tot_actv,
+ROW_NUMBER() OVER (ORDER BY temp1.tot_actv DESC)  row_ord
+FROM
+(SELECT country_code,
+(SUM(sms_in_act)+SUM(sms_out_act)+SUM(call_in_act)+SUM(call_out_act)+SUM(internet_traff_act)) tot_actv
+FROM assgn.cdr_cntry3 GROUP BY country_code)  temp1) temp2
+WHERE row_ord=2;--33
+
+--4.Which squareID has the maximum total SMS activity in these three countries? Note that total SMS activity is the sum of incoming and outgoing SMSes.
+SELECT square_id mx_tot_sms_act_cntry FROM
+(SELECT square_id,
+(SUM(sms_in_act)+SUM(sms_out_act)) tot_sms_actv 
+FROM assgn.cdr_cntry3 
+GROUP BY square_id 
+ORDER BY tot_sms_actv DESC 
+LIMIT 1)Temp1;--1151
+
+--Creating a compressed version of cdr_cntry3 table
+CREATE TABLE assgn.cdr_cntry3_orc STORED AS ORC AS SELECT * FROM assgn.cdr_cntry3;
+
+--5.What is the total activity for the three countries? Note that total activity is defined as the sum of sms_in, sms_out, call_in, call_out, internet_traffic. For this task, first compress the table that was created in the beginning of task 2. Submit the result upto three decimal places, without rounding off the digits, obtained after compressing the table.  
+SELECT 
+CAST(CAST((SUM(sms_in_act)+
+SUM(sms_out_act)+
+SUM(call_in_act)+
+SUM(call_out_act)+
+SUM(internet_traff_act))*1000 AS INT)/1000 AS DECIMAL(22,3))  tot_actv
+FROM assgn.cdr_cntry3_orc;--568447.566
+
+--Creating a Paritioned cdr table based on the country code for quick fetch
+CREATE TABLE assgn.cdr_cntry3_partitioned (
+square_id INT,
+time_interval BIGINT,
+sms_in_act DOUBLE,
+sms_out_act DOUBLE,
+call_in_act DOUBLE,
+call_out_act DOUBLE,
+internet_traff_act DOUBLE)
+PARTITIONED BY (country_code INT);
+--Load
+set hive.exec.max.dynamic.partitions=1000;
+set hive.exec.max.dynamic.partitions.pernode=1000;
+SET hive.exec.dynamic.partition = true;
+SET hive.exec.dynamic.partition.mode = nonstrict;
+INSERT INTO TABLE assgn.cdr_cntry3_partitioned PARTITION(country_code)
+SELECT square_id,
+time_interval,
+sms_in_act,
+sms_out_act,
+call_in_act,
+call_out_act,
+internet_traff_act,
+country_code
+FROM assgn.cdr_cntry3;
+
+--6.What is the total call activity from the three square_ids to country_code 39? Submit the result upto three decimal places, without rounding off the digits.
+SELECT CAST(CAST((
+SUM(call_in_act)+
+SUM(call_out_act))*1000 AS INT)/1000 AS DECIMAL(22,3)) tot_cal_act 
+FROM assgn.cdr_cntry3_partitioned 
+WHERE country_code = 39 AND 
+square_id IN (101,102,103);--290.821
+
+--7.What is the total SMS activity from the three square_ids to country_code 39? Submit the result upto three decimal places, without rounding off the digits. 
+SELECT CAST(CAST((
+SUM(sms_in_act)+
+SUM(sms_out_act))*1000 AS INT)/1000 AS DECIMAL(22,3)) tot_sms_act 
+FROM assgn.cdr_cntry3_partitioned 
+WHERE country_code = 39 AND 
+square_id IN (101,102,103);--622.232
+
+--8.What is the total activity, i.e. sum of CallIn, CallOut, SMSIn, SMSOut, internet traffic of the three square_ids? Submit the result upto three decimal places, without rounding off the digits. You may either compress the partitioned table or not
+SELECT CAST(CAST((SUM(sms_in_act)+
+SUM(sms_out_act)+
+SUM(call_in_act)+
+SUM(call_out_act)+
+SUM(internet_traff_act))*1000 AS INT)/1000 AS DECIMAL(22,3))  tot_actv 
+FROM assgn.cdr_cntry3_partitioned 
+WHERE
+square_id IN (101,102,103);--5345.594
