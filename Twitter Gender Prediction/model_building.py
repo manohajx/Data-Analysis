@@ -23,7 +23,7 @@ from sklearn.model_selection import cross_val_score
 
 
 #Importing the Dataset for Model Building
-twitter_data=pd.read_csv(r'C:\Users\johnp\Desktop\ML assignment\twitter_data_model_duilding.csv',sep=",",index_col='Unnamed: 0')
+twitter_data=pd.read_csv(r'C:\Users\johnp\Desktop\ML assignment\twitter_data_model_building.csv',sep=",",index_col='Unnamed: 0')
 
 
 #Removing features that have correlation of 0.75 or more
